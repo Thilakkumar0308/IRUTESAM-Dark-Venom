@@ -63,7 +63,7 @@ TFT_eSPI/User_Setup.h
 #define TFT_RST  -1
 
 #define TOUCH_CS 21
-
+```
 ## 🔌 Pin Configuration
 
 ### 🖥️ TFT + Touch (Shared SPI)
