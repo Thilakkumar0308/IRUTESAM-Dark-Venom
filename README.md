@@ -3,6 +3,11 @@
 </p>
 # 💀 IRUTESAM — Dark Venom v1.0
 
+<p>
+  <a href="https://irutesam.zeal.wtf/">Preview of Firmware</a>
+
+</p>
+
 IRUTESAM is an ESP32-based IR hacking toolkit with a custom hacker-style touchscreen UI.  
 This version (v1.0) focuses on **IR capture, analysis, storage, and replay** using a 2.8" TFT display.
 
