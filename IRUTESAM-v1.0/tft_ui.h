@@ -33,11 +33,8 @@ void drawWifiList(const char **ssids, const int *rssi,
                   uint8_t sel, uint8_t offset);
 void drawWifiDetail(const char *ssid, const char *bssid,
                     int rssi, uint8_t channel, int secType);
-void drawDeauthScreen(const char *ssid, uint8_t channel,
-                      uint32_t pktCount, bool pulse);
-void drawDeauthProtect(uint8_t deauthCount);
-void drawSecurityAnalysis(const char **ssids, const int *secTypes,
-                          uint8_t count, uint8_t sel, uint8_t offset);
+void drawSecurityAnalysis(const int *secTypes, const uint8_t *channels,
+                          uint8_t count);
 
 // NFC
 void drawNFCScan(uint8_t step);
