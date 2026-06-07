@@ -1,60 +1,76 @@
 <p align="center">
   <img src="https://capsule-render.vercel.app/api?type=venom&color=0:000000,50:00111a,100:003344&height=220&section=header&text=IRUTESAM&fontSize=55&fontColor=00E6FF&animation=twinkling&fontAlignY=35&desc=DARK%20VENOM%20INTERFACE&descAlignY=60&descAlign=50"/>
 </p>
-# 💀 IRUTESAM — Dark Venom v1.0
-
-<p>
-  <a href="https://irutesam.zeal.wtf/">Preview of Firmware</a>
-
+<p align="center">
+  <img src="https://capsule-render.vercel.app/api?type=venom&color=0:000000,50:00111a,100:003344&height=220&section=header&text=IRUTESAM&fontSize=55&fontColor=00E6FF&animation=twinkling&fontAlignY=35&desc=DARK%20VENOM%20INTERFACE&descAlignY=60&descAlign=50"/>
 </p>
 
-IRUTESAM is an ESP32-based IR hacking toolkit with a custom hacker-style touchscreen UI.  
-This version (v1.0) focuses on **IR capture, analysis, storage, and replay** using a 2.8" TFT display.
+# 💀 IRUTESAM — Dark Venom v1.0
 
-> Capture ➜ Save ➜ Replay ➜ Control
+<p align="center">
+  <a href="https://irutesam.zeal.wtf/">Preview of Firmware</a>
+</p>
+
+IRUTESAM is an ESP32-based IoT toolkit featuring IR analysis, WiFi scanning, NFC interaction, SD card storage, and a custom Dark Venom touchscreen UI.
+
+Built for embedded experimentation, wireless analysis, automation, and hardware research.
+
+> 📡 IR Capture ➜ Save ➜ Replay
+> 📶 WiFi Scan ➜ Analyze ➜ Monitor
+> 📱 NFC Detect ➜ Read UID ➜ Store
 
 ---
 
-## ⚡ Features (v1.0)
+## ⚡ Features
 
-- 📡 IR Signal Capture (all major protocols)
-- 🔁 IR Replay (protocol + RAW fallback)
-- 💾 Save signals to SD card
-- 📂 Load / delete saved signals
-- 📊 Live waveform visualization
-- 🖥️ Advanced hacker-style UI (Dark Venom theme)
-- 👆 Touchscreen navigation (XPT2046)
+* 📡 IR Signal Capture & Replay
+* 💾 Save / Load IR Signals from SD Card
+* 📂 Signal File Manager
+* 📶 WiFi Network Scanner
+* 🔐 WiFi Security Detection (Open / WEP / WPA / WPA2 / WPA3)
+* 📱 PN532 NFC Tag Detection
+* 🆔 NFC UID Reading & Storage
+* 👆 XPT2046 Touch Navigation
+* 🎨 Dark Venom Hacker-Style UI
+* 💻 Real-time Embedded Interface
 
 ---
 
 ## 🧠 Hardware Used
 
-- ESP32 DevKit V1
-- ILI9341 2.8" TFT (240x320)
-- XPT2046 Touch Controller
-- IR Receiver + IR LED
-- SD Card Module
+* ESP32 DevKit V1
+* ILI9341 2.8" TFT Display (240x320)
+* XPT2046 Touch Controller
+* PN532 NFC Module
+* IR Receiver Module
+* IR LED Transmitter
+* SD Card Module
 
 ---
 
 ## 📦 Required Libraries
 
-Install via Arduino Library Manager:
+Install using Arduino Library Manager:
 
-- `TFT_eSPI` (by Bodmer)
-- `IRremoteESP8266`
-- `XPT2046_Touchscreen`
-- `SD` (built-in)
-- `SPI` (built-in)
+* TFT_eSPI
+* IRremoteESP8266
+* XPT2046_Touchscreen
+* Adafruit PN532
+* SD
+* SPI
 
 ---
 
-## ⚙️ TFT_eSPI Setup (IMPORTANT)
+## ⚙️ TFT_eSPI Setup
 
-Edit this file:
+Edit:
+
+```cpp
 TFT_eSPI/User_Setup.h
+```
 
-### Set Driver:
+Configure:
+
 ```cpp
 #define ILI9341_2_DRIVER
 #define TFT_RGB_ORDER TFT_BGR
@@ -65,98 +81,175 @@ TFT_eSPI/User_Setup.h
 
 #define TFT_CS   17
 #define TFT_DC   16
-#define TFT_RST  -1
+#define TFT_RST  5
 
-#define TOUCH_CS 21
+#define TOUCH_CS 25
 ```
-## 🔌 Pin Configuration
-
-### 🖥️ TFT + Touch (Shared SPI)
-
-| Signal   | GPIO |
-|----------|------|
-| MOSI     | 23   |
-| MISO     | 19   |
-| SCK      | 18   |
-| TFT_CS   | 17   |
-| DC       | 16   |
-| TOUCH_CS | 21   |
 
 ---
+
+## 🔌 Pin Configuration
+
+### 🖥️ TFT Display (ILI9341)
+
+| Signal  | GPIO |
+| ------- | ---- |
+| MOSI    | 23   |
+| MISO    | 19   |
+| SCK     | 18   |
+| TFT_CS  | 17   |
+| TFT_DC  | 16   |
+| TFT_RST | 5    |
+| TFT_BL  | 21   |
+
+### 👆 Touch Controller (XPT2046)
+
+| Signal    | GPIO |
+| --------- | ---- |
+| TOUCH_CS  | 25   |
+| TOUCH_IRQ | 22   |
 
 ### 💾 SD Card (Separate SPI)
 
 | Signal | GPIO |
-|--------|------|
+| ------ | ---- |
 | MOSI   | 12   |
 | MISO   | 13   |
 | SCK    | 14   |
 | CS     | 27   |
 
----
-
 ### 📡 IR Module
 
 | Signal | GPIO |
-|--------|------|
-| IR RX  | 15   |
-| IR TX  | 4    |
+| ------ | ---- |
+| IR_RX  | 15   |
+| IR_TX  | 4    |
 
-## 🔥 How It Works
+### 📱 NFC Module (PN532 UART)
 
-### 📡 IR Capture
-- Uses `IRrecv`
-- Converts raw buffer → microseconds
-- Stores protocol + raw data
-
----
-
-### 💾 IR Save
-- Saved as `.ir` file on SD card  
-- File format:
-
-protocol,value,bits,rawLen
-raw1,raw2,raw3...****
+| Signal   | GPIO |
+| -------- | ---- |
+| PN532_RX | 33   |
+| PN532_TX | 32   |
 
 ---
 
-### 🔁 IR Replay
-- First tries protocol-based sending  
-- Falls back to RAW signal if needed  
+## 🔥 Modules
+
+### 📡 IR Module
+
+* Capture IR signals
+* Decode major protocols
+* Store RAW timings
+* Replay saved commands
+* Protocol and RAW fallback support
+
+### 📶 WiFi Module
+
+* Scan nearby wireless networks
+* Display RSSI values
+* Detect security type
+* Navigate available networks
+* Real-time refresh support
+
+### 📱 NFC Module
+
+* Read PN532 NFC tags
+* Capture UID information
+* Store NFC records
+* Fast tag identification
+
+### 💾 SD Storage
+
+* Save captured IR signals
+* Load stored files
+* Delete saved entries
+* Persistent storage
 
 ---
 
-## 🖥️ UI System
+## 🖥️ User Interface
 
-- Custom rendering engine using `TFT_eSPI`  
-- Dark Venom hacker-style theme  
-- Boot animation + hex graphics  
-- Menu, dialog, and waveform UI screens  
+* Dark Venom custom theme
+* Touchscreen optimized layout
+* Animated boot screen
+* Status indicators
+* Menu navigation system
+* Embedded hacker-style design
+
+---
+
+## 👆 Touch Controls
+
+| Action     | Function       |
+| ---------- | -------------- |
+| Tap        | Select         |
+| Swipe Up   | Navigate Up    |
+| Swipe Down | Navigate Down  |
+| Back       | Return         |
+| Select     | Open Menu Item |
 
 ---
 
-## 👆 Touch System
+## 📁 Firmware Structure
 
-- Gesture-based controls:
-  - Tap → Select  
-  - Hold → Open  
-  - Double tap → Fast action  
-- Smart zone detection:
-  - UP / DOWN / SELECT  
+```text
+IRUTESAM-v1.0/
+├── IRUTESAM.ino
+├── config.h
+├── ir_module.cpp
+├── ir_module.h
+├── main_ui.h
+├── nav_manager.cpp
+├── nav_manager.h
+├── nfc_module.cpp
+├── nfc_module.h
+├── sd_manager.cpp
+├── sd_manager.h
+├── tft_ui.cpp
+├── tft_ui.h
+├── touch_input.cpp
+├── touch_input.h
+├── wifi_module.cpp
+└── wifi_module.h
+```
 
 ---
+
 ## 🚀 Upload Instructions
 
-### 🛠️ Board
+### Board
+
+```text
 ESP32 Dev Module
+```
 
-### 📦 Partition Scheme
-Default 4MB
+### Partition Scheme
 
-### ⬆️ Upload
-- Connect ESP32 via USB  
-- Select correct COM port  
-- Click Upload in Arduino IDE
+```text
+Default 4MB with SPIFFS
+```
 
+### Upload
 
+1. Connect ESP32 via USB
+2. Select the correct COM port
+3. Choose ESP32 Dev Module
+4. Compile the firmware
+5. Upload to ESP32
+6. Reboot device
+
+---
+
+## ⚠️ Disclaimer
+
+This project is intended for educational, research, and authorized testing purposes only.
+
+Users are responsible for complying with local laws and regulations when using IR, NFC, and wireless functionality.
+
+---
+
+<p align="center">
+Made with ❤️ using ESP32
+</p>
 
