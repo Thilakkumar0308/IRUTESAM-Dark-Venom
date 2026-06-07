@@ -1,9 +1,6 @@
 <p align="center">
   <img src="https://capsule-render.vercel.app/api?type=venom&color=0:000000,50:00111a,100:003344&height=220&section=header&text=IRUTESAM&fontSize=55&fontColor=00E6FF&animation=twinkling&fontAlignY=35&desc=DARK%20VENOM%20INTERFACE&descAlignY=60&descAlign=50"/>
 </p>
-<p align="center">
-  <img src="https://capsule-render.vercel.app/api?type=venom&color=0:000000,50:00111a,100:003344&height=220&section=header&text=IRUTESAM&fontSize=55&fontColor=00E6FF&animation=twinkling&fontAlignY=35&desc=DARK%20VENOM%20INTERFACE&descAlignY=60&descAlign=50"/>
-</p>
 
 # 💀 IRUTESAM — Dark Venom v1.0
 
