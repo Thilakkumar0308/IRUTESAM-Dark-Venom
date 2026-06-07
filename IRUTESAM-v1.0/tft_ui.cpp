@@ -398,66 +398,11 @@ void drawWifiDetail(const char *ssid, const char *bssid, int rssi, uint8_t chann
     row(104, "SECURITY:", sec);
 
     tft.drawFastHLine(0, 124, SCREEN_W, DV_CYAN_MID);
-    tft.setTextColor(DV_PINK, DV_BG); tft.setCursor(6, 136); tft.print("SELECT");
-    tft.setTextColor(DV_CYAN_DIM, DV_BG); tft.print(" > Launch Deauth Attack");
-    tft.setTextColor(DV_GREEN, DV_BG); tft.setCursor(6, 152); tft.print("BACK");
+    tft.setTextColor(DV_GREEN, DV_BG); tft.setCursor(6, 136); tft.print("BACK");
     tft.setTextColor(DV_CYAN_DIM, DV_BG); tft.print(" > Return to list");
 }
 
-void drawDeauthScreen(const char *ssid, uint8_t channel, uint32_t pktCount, bool pulse) {
-    clearContentArea();
-    drawCenteredText("DEAUTH ACTIVE", 40, pulse ? DV_RED : DV_CYAN_DIM, 2);
-
-    int cx = 120, cy = 134;
-    if (pulse) tft.fillCircle(cx, cy, 28, DV_RED);
-    else {
-        tft.fillCircle(cx, cy, 28, DV_BG);
-        tft.drawCircle(cx, cy, 28, DV_RED);
-    }
-
-    for (int i = 0; i < 6; i++) {
-        float a = i * 60.0f * DEG_TO_RAD;
-        tft.drawLine(cx + (int)(35 * cos(a)), cy + (int)(35 * sin(a)),
-                     cx + (int)(50 * cos(a)), cy + (int)(50 * sin(a)), DV_RED);
-    }
-    tft.drawCircle(cx, cy, 52, DV_CYAN_MID);
-
-    tft.setTextColor(DV_CYAN_DIM, DV_BG); tft.setCursor(6, 194); tft.print("TARGET:");
-    tft.setTextColor(DV_CYAN, DV_BG);     tft.setCursor(60, 194); tft.print(ssid);
-    tft.setTextColor(DV_AMBER, DV_BG);    tft.setCursor(6, 210);  tft.print("PKT:");
-    tft.setTextColor(DV_RED, DV_BG);      tft.setCursor(40, 210); tft.print(pktCount);
-
-    char ch[12];
-    snprintf(ch, sizeof(ch), "CH %u", channel);
-    drawCenteredText(ch, 224, DV_PURPLE, 1);
-    drawCenteredText("TAP LOWER HALF TO STOP", 272, DV_CYAN_DIM, 1);
-}
-
-void drawDeauthProtect(uint8_t deauthCount) {
-    clearContentArea();
-    tft.setTextSize(1);
-    tft.setTextColor(DV_PURPLE, DV_BG);
-    tft.setCursor(6, 20);
-    tft.print("// Deauth Protect");
-    tft.drawFastHLine(0, 30, SCREEN_W, DV_CYAN_MID);
-
-    tft.setTextColor(DV_CYAN_DIM, DV_BG);
-    tft.setCursor(6, 44);
-    tft.print("Monitoring for deauth...");
-
-    tft.setTextColor(DV_AMBER, DV_BG);
-    tft.setCursor(6, 70);
-    tft.print("DEAUTH FRAMES DETECTED:");
-
-    char buf[8];
-    snprintf(buf, sizeof(buf), "%u", deauthCount);
-    drawCenteredText(buf, 96, deauthCount > 0 ? DV_RED : DV_GREEN, 3);
-    drawCenteredText("BACK to stop monitoring", 262, DV_CYAN_DIM, 1);
-}
-
-void drawSecurityAnalysis(const char **ssids, const int *secTypes,
-                          uint8_t count, uint8_t sel, uint8_t offset) {
-    (void)ssids; (void)sel; (void)offset;
+void drawSecurityAnalysis(const int *secTypes, const uint8_t *channels, uint8_t count) {
     clearContentArea();
 
     tft.setTextSize(1);
@@ -466,28 +411,86 @@ void drawSecurityAnalysis(const char **ssids, const int *secTypes,
     tft.print("// Security Analysis");
     tft.drawFastHLine(0, 30, SCREEN_W, DV_CYAN_MID);
 
-    int open = 0, weak = 0, strong = 0;
+    int open = 0, weak = 0;
+    int riskScore = 0;
+
+    // Channel frequency counter (channels 1–14)
+    uint8_t chCount[15] = {0};
+
     for (uint8_t i = 0; i < count; i++) {
-        if (secTypes[i] == SEC_OPEN) open++;
-        else if (secTypes[i] == SEC_WEP || secTypes[i] == SEC_WPA) weak++;
-        else strong++;
+        int sec = secTypes[i];
+        if      (sec == SEC_OPEN) { open++; riskScore += 25; }
+        else if (sec == SEC_WEP)  { weak++; riskScore += 15; }
+        else if (sec == SEC_WPA)  { weak++; riskScore += 10; }
+        else if (sec == SEC_WPA2) { riskScore += 2; }
+        // WPA3 adds 0
+
+        if (channels != nullptr) {
+            uint8_t ch = channels[i];
+            if (ch >= 1 && ch <= 14) chCount[ch]++;
+        }
     }
 
-    tft.setTextColor(DV_CYAN_DIM, DV_BG); tft.setCursor(6, 40); tft.print("Total networks: ");
-    tft.setTextColor(DV_CYAN, DV_BG);     tft.print(count);
-    tft.setTextColor(DV_RED, DV_BG);      tft.setCursor(6, 58); tft.print("OPEN:   "); tft.print(open);
-    tft.setTextColor(DV_AMBER, DV_BG);    tft.setCursor(6, 74); tft.print("WEAK:   "); tft.print(weak);
-    tft.setTextColor(DV_GREEN, DV_BG);    tft.setCursor(6, 90); tft.print("SECURE: "); tft.print(strong);
+    if (riskScore > 100) riskScore = 100;
 
-    tft.drawFastHLine(0, 106, SCREEN_W, DV_CYAN_MID);
-    tft.setTextColor(DV_CYAN_DIM, DV_BG); tft.setCursor(6, 116); tft.print("Risk score:");
-    int risk = min(100, open * 25 + weak * 10);
-    tft.setTextColor(risk > 50 ? DV_RED : (risk > 20 ? DV_AMBER : DV_GREEN), DV_BG);
-    tft.setCursor(90, 116); tft.print(risk); tft.print("%");
-    tft.fillRect(6, 132, 228, 10, DV_BG2);
-    tft.drawRoundRect(6, 132, 228, 10, 2, DV_CYAN_MID);
-    tft.fillRect(6, 132, (228 * risk) / 100, 10,
-                 risk > 50 ? DV_RED : (risk > 20 ? DV_AMBER : DV_GREEN));
+    // Find most crowded channel
+    uint8_t crowdedCh = 0;
+    uint8_t crowdedMax = 0;
+    for (uint8_t c = 1; c <= 14; c++) {
+        if (chCount[c] > crowdedMax) {
+            crowdedMax = chCount[c];
+            crowdedCh  = c;
+        }
+    }
+
+    const char *status;
+    uint16_t    statusCol;
+    if      (riskScore >= 50) { status = "HIGH";   statusCol = DV_RED;   }
+    else if (riskScore >= 20) { status = "MEDIUM"; statusCol = DV_AMBER; }
+    else                      { status = "LOW";    statusCol = DV_GREEN; }
+
+    // Helper lambda for key:value rows
+    auto row = [&](int y, const char *label, uint16_t valCol, const char *val) {
+        tft.setTextColor(DV_CYAN_DIM, DV_BG);
+        tft.setCursor(6, y);
+        tft.print(label);
+        tft.setTextColor(valCol, DV_BG);
+        tft.setCursor(136, y);
+        tft.print(val);
+    };
+
+    char buf[16];
+
+    snprintf(buf, sizeof(buf), "%u", count);
+    row(42, "Total Networks :", DV_CYAN, buf);
+
+    snprintf(buf, sizeof(buf), "%u", (unsigned)open);
+    row(58, "Open Networks  :", open > 0 ? DV_RED : DV_GREEN, buf);
+
+    snprintf(buf, sizeof(buf), "%u", (unsigned)weak);
+    row(74, "Weak Networks  :", weak > 0 ? DV_AMBER : DV_GREEN, buf);
+
+    tft.drawFastHLine(0, 88, SCREEN_W, DV_CYAN_MID);
+
+    snprintf(buf, sizeof(buf), "%d%%", riskScore);
+    row(96, "Risk Score     :", statusCol, buf);
+
+    // Risk bar
+    tft.fillRect(6, 110, 228, 8, DV_BG2);
+    tft.drawRoundRect(6, 110, 228, 8, 2, DV_CYAN_MID);
+    if (riskScore > 0)
+        tft.fillRect(6, 110, (228 * riskScore) / 100, 8, statusCol);
+
+    row(122, "Status         :", statusCol, status);
+
+    tft.drawFastHLine(0, 136, SCREEN_W, DV_CYAN_MID);
+
+    if (crowdedCh > 0) {
+        snprintf(buf, sizeof(buf), "%u", (unsigned)crowdedCh);
+        row(144, "Crowded CH     :", DV_CYAN, buf);
+    } else {
+        row(144, "Crowded CH     :", DV_CYAN_DIM, "N/A");
+    }
 }
 
 // ===== NFC =====
