@@ -41,8 +41,8 @@ extern TFT_eSPI tft;
 static const char *HOME_ITEMS[]     = { "Wi-Fi Tools", "NFC Tools", "IR Tools", "Saved Files", "Settings" };
 static const uint8_t HOME_COUNT     = 5;
 
-static const char *WIFI_ITEMS[]     = { "Scan Networks", "Security Analysis", "Network Detail", "Port Scanner", "Wi-Fi Info" };
-static const uint8_t WIFI_COUNT     = 5;
+static const char *WIFI_ITEMS[]     = { "Scan Networks", "Security Analysis", "Wi-Fi Info" };
+static const uint8_t WIFI_COUNT     = 3;
 
 static const char *NFC_ITEMS[]      = { "NFC Scan", "NFC Emulation", "Saved NFC Cards", "NFC Info" };
 static const uint8_t NFC_COUNT      = 4;
@@ -61,12 +61,7 @@ static const uint8_t SETTINGS_COUNT = 2;
 // ════════════════════════════════════════════════════════════
 
 // ── WiFi ─────────────────────────────────────────────────────
-static PortScanResult portResults[WIFI_PORT_COUNT];
-static uint8_t        portCount        = 0;
-static char           portScanIP[20]   = "192.168.1.1";
-static bool           portScanDone     = false;
 static bool           wifiScanning     = false;
-static char           portScanIPInput[20] = "192.168.1.1";
 
 // ── IR ───────────────────────────────────────────────────────
 static char        irFileNames[IR_FILES_MAX][IR_NAME_MAX + 5];
@@ -438,54 +433,10 @@ static void drawWifiInfoScreen() {
     tft.setCursor(6, 94);  tft.print("> Network scanner (SSID/BSSID)");
     tft.setCursor(6, 108); tft.print("> Signal strength & encryption");
     tft.setCursor(6, 122); tft.print("> Security analysis & risk score");
-    tft.setCursor(6, 136); tft.print("> Local network port scanner");
     tft.drawFastHLine(0, 152, SCREEN_W, DV_CYAN_MID);
     tft.setTextColor(DV_AMBER, DV_BG);
     tft.setCursor(6, 162); tft.print("For educational/diagnostic use");
     tft.setCursor(6, 176); tft.print("on networks you own/authorise.");
-}
-
-static void drawPortScanScreen(bool scanning) {
-    if (scanning) {
-        tft.fillRect(0, STATUS_H, SCREEN_W, FOOTER_Y - STATUS_H, DV_BG);
-        tft.setTextSize(1);
-        tft.setTextColor(DV_PURPLE, DV_BG);
-        tft.setCursor(6, 20);
-        tft.print("// Port Scanner");
-        tft.drawFastHLine(0, 30, SCREEN_W, DV_CYAN_MID);
-        tft.setTextColor(DV_CYAN_DIM, DV_BG);
-        tft.setCursor(6, 50); tft.print("Target: ");
-        tft.setTextColor(DV_CYAN, DV_BG);
-        tft.print(portScanIP);
-        drawCenteredText("SCANNING...", 130, DV_AMBER, 2);
-        return;
-    }
-
-    tft.fillRect(0, STATUS_H, SCREEN_W, FOOTER_Y - STATUS_H, DV_BG);
-    tft.setTextSize(1);
-    tft.setTextColor(DV_PURPLE, DV_BG);
-    tft.setCursor(6, 20);
-    tft.print("// Port Scanner");
-    tft.drawFastHLine(0, 30, SCREEN_W, DV_CYAN_MID);
-
-    tft.setTextColor(DV_CYAN_DIM, DV_BG);
-    tft.setCursor(6, 40); tft.print("Target: ");
-    tft.setTextColor(DV_CYAN, DV_BG);
-    tft.print(portScanIP);
-
-    int yPos = 58;
-    for (uint8_t i = 0; i < portCount; i++) {
-        bool o = portResults[i].open;
-        tft.setTextColor(DV_CYAN_DIM, DV_BG);
-        tft.setCursor(6, yPos);
-        char buf[24];
-        snprintf(buf, sizeof(buf), ":%u", portResults[i].port);
-        tft.print(buf);
-        tft.setCursor(70, yPos);
-        tft.setTextColor(o ? DV_GREEN : DV_RED, DV_BG);
-        tft.print(o ? "OPEN" : "closed");
-        yPos += 16;
-    }
 }
 
 static void drawNFCInfoScreen() {
@@ -638,11 +589,12 @@ void loop() {
         bool opened = handleMenuTouch(tevt, tx, ty, WIFI_ITEMS, WIFI_COUNT, drawMenuWrapper, "WI-FI TOOLS");
         if (opened) {
             switch (nav.sel()) {
-                case 0: nav.goTo(SCR_WIFI_SCAN);     break;
+                case 0:
+                    wifiNetCount = 0;  // force fresh scan
+                    nav.goTo(SCR_WIFI_SCAN, 0, 0);
+                    break;
                 case 1: nav.goTo(SCR_WIFI_SECURITY); break;
-                case 2: nav.goTo(SCR_WIFI_DETAIL);   break;
-                case 3: nav.goTo(SCR_WIFI_PORT_SCAN);break;
-                case 4: nav.goTo(SCR_WIFI_INFO);     break;
+                case 2: nav.goTo(SCR_WIFI_INFO);     break;
             }
         }
         break;
@@ -651,19 +603,28 @@ void loop() {
     case SCR_WIFI_SCAN: {
         if (newScr) {
             drawStatusBar("Scan Networks", DV_CYAN_MID);
-            tft.fillRect(0, STATUS_H, SCREEN_W, FOOTER_Y - STATUS_H, DV_BG);
-            tft.setTextSize(1);
-            tft.setTextColor(DV_PURPLE, DV_BG);
-            tft.setCursor(6, 20);
-            tft.print("// Scanning Wi-Fi...");
-            drawCenteredText("Please wait...", 140, DV_CYAN_DIM, 1);
-            drawFooter("", "", "");
 
-            wifiNetCount = wifiScan(wifiNets, WIFI_MAX_NETWORKS);
-            wifiReady    = (wifiNetCount > 0);
-            buildWifiPtrs();
+            // Only scan if we have no cached data
+            if (wifiNetCount == 0) {
+                tft.fillRect(0, STATUS_H, SCREEN_W, FOOTER_Y - STATUS_H, DV_BG);
+                tft.setTextSize(1);
+                tft.setTextColor(DV_PURPLE, DV_BG);
+                tft.setCursor(6, 20);
+                tft.print("// Scanning Wi-Fi...");
+                drawCenteredText("Please wait...", 140, DV_CYAN_DIM, 1);
+                drawFooter("", "", "");
+
+                wifiNetCount = wifiScan(wifiNets, WIFI_MAX_NETWORKS);
+                wifiReady    = (wifiNetCount > 0);
+                buildWifiPtrs();
+            }
 
             if (wifiNetCount == 0) {
+                tft.fillRect(0, STATUS_H, SCREEN_W, FOOTER_Y - STATUS_H, DV_BG);
+                tft.setTextSize(1);
+                tft.setTextColor(DV_PURPLE, DV_BG);
+                tft.setCursor(6, 20);
+                tft.print("// Scanning Wi-Fi...");
                 drawCenteredText("No networks found", 140, DV_CYAN_DIM, 1);
                 drawFooter("TAP", "footer", "BACK");
                 break;
@@ -738,24 +699,6 @@ void loop() {
         break;
     }
 
-    case SCR_WIFI_PORT_SCAN: {
-        if (newScr) {
-            drawStatusBar("Port Scanner", DV_CYAN_MID);
-            // Use router IP from last scan if available
-            if (wifiNetCount > 0) {
-                // Default to common gateway
-                strncpy(portScanIP, "192.168.1.1", sizeof(portScanIP));
-            }
-            drawPortScanScreen(true);
-            drawFooter("", "scanning", "");
-            portCount   = wifiPortScan(portScanIP, portResults, WIFI_PORT_COUNT);
-            portScanDone = true;
-            drawPortScanScreen(false);
-            drawFooter("BACK", "return", "");
-        }
-        break;
-    }
-
     case SCR_WIFI_SECURITY: {
         if (newScr) {
             drawStatusBar("Security Analysis", DV_CYAN_MID);
@@ -764,8 +707,11 @@ void loop() {
                 drawCenteredText("No scan data.", 130, DV_CYAN_DIM, 1);
                 drawCenteredText("Run Scan Networks first.", 146, DV_CYAN_DIM, 1);
             } else {
-                drawSecurityAnalysis(wifiSSIDPtrs, wifiSec, wifiNetCount,
-                                     nav.sel(), nav.offset());
+                // Build channel array from wifiNets
+                static uint8_t wifiChannels[WIFI_MAX_NETWORKS];
+                for (uint8_t i = 0; i < wifiNetCount; i++)
+                    wifiChannels[i] = wifiNets[i].channel;
+                drawSecurityAnalysis(wifiSec, wifiChannels, wifiNetCount);
             }
             drawFooter("BACK", "return", "");
         }
