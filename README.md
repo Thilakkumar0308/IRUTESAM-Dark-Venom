@@ -250,3 +250,6 @@ Users are responsible for complying with local laws and regulations when using I
 Made with ❤️ using ESP32
 </p>
 
+## License
+
+MIT License © 2026 Thilakkumar S
